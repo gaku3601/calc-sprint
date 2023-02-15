@@ -109,43 +109,37 @@ func calcTimeToComplete(headers []string, values [][]string) error {
 	if err != nil {
 		return err
 	}
-	sp, err := getSummaryPosition(headers)
-	if err != nil {
-		return err
-	}
 
-	var consumptionTimes int
-	var storyPoints int
-	var bufferTime int
+	var consumptionTimes float64
+	var storyPoints float64
+	var bufferTimes float64
 	for _, row := range values {
-		// バッファ以外のタスクでステータスが完了で時間が格納されているものだけ抽出して計算に必要な値を算出
-		if row[rp] == "完了" && row[ctp] != "" && row[sp] != "バッファ" {
-			consumptionTime, err := strconv.Atoi(row[ctp])
+		// 予定したタスクでステータスが完了で時間が格納されているものだけ抽出して計算に必要な値を算出
+		if row[rp] == "完了" && row[spe] != "" {
+			consumptionTime, err := strconv.ParseFloat(row[ctp], 64)
 			if err != nil {
-				return err
+				consumptionTime = 0
 			}
 			consumptionTimes += consumptionTime
 
-			if row[spe] == "" {
-				return fmt.Errorf("ストーリーポイントが入っていないストーリーが存在します: %s", row[sp])
-			}
-			storyPoint, err := strconv.Atoi(row[spe])
+			storyPoint, err := strconv.ParseFloat(row[spe], 64)
 			if err != nil {
 				return err
 			}
 			storyPoints += storyPoint
 		}
-		// バッファタスクの消費時間を算出
-		if row[sp] == "バッファ" {
-			bufferTime, err = strconv.Atoi(row[ctp])
+		// 予定していなかったタスクの消費時間を算出
+		if row[rp] == "完了" && row[spe] == "" {
+			bufferTime, err := strconv.ParseFloat(row[ctp], 64)
 			if err != nil {
-				return err
+				bufferTime = 0
 			}
+			bufferTimes += bufferTime
 		}
 	}
-	fmt.Printf("バッファ以外の完了タスクにおけるトータル消費時間: %.1fh\n", float64(consumptionTimes)/60/60)
-	fmt.Printf("完了したストーリーポイント: %d\n", storyPoints)
-	fmt.Printf("バッファで消費した時間: %.1fh\n", float64(bufferTime)/60/60)
+	fmt.Printf("ストーリーポイント格納済み完了タスクトータル消費時間: %.1fh\n", float64(consumptionTimes)/60/60)
+	fmt.Printf("完了したストーリーポイント: %.1f\n", storyPoints)
+	fmt.Printf("ストーリーポイント未格納完了タスク(予定外タスク)トータル消費時間: %.1fh\n", float64(bufferTimes)/60/60)
 	return nil
 }
 
